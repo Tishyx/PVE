@@ -632,6 +632,72 @@ body {
     font-size: 0.75rem;
 }
 
+.ability-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.breakdown-header,
+.breakdown-row {
+    display: grid;
+    grid-template-columns: 1.4fr 0.7fr 1fr 0.6fr;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+}
+
+.breakdown-header {
+    background: rgba(35, 47, 82, 0.72);
+    border: 1px solid rgba(255, 215, 0, 0.14);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #a9bbff;
+}
+
+.breakdown-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.breakdown-row {
+    background: rgba(19, 28, 52, 0.8);
+    border: 1px solid rgba(255, 215, 0, 0.1);
+    font-size: 0.82rem;
+    color: #f4f6fb;
+}
+
+.breakdown-row.top {
+    background: linear-gradient(120deg, rgba(255, 215, 0, 0.22), rgba(19, 28, 52, 0.85));
+    border-color: rgba(255, 215, 0, 0.35);
+}
+
+.breakdown-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.breakdown-count,
+.breakdown-damage,
+.breakdown-percent {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.breakdown-empty {
+    padding: 12px 10px;
+    border-radius: 10px;
+    border: 1px dashed rgba(255, 215, 0, 0.2);
+    color: #9aa9da;
+    font-size: 0.8rem;
+    text-align: center;
+}
+
 .buff-list,
 .debuff-list {
     display: flex;
