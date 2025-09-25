@@ -361,6 +361,7 @@ class UIController {
             averageDPS: document.getElementById('averageDPS'),
             hitCount: document.getElementById('hitCount'),
             critCount: document.getElementById('critCount'),
+            abilityBreakdownList: document.getElementById('abilityBreakdownList'),
             nextAbility: document.getElementById('nextAbility'),
             nextAbilityReason: document.getElementById('nextAbilityReason'),
             forecast1: document.getElementById('forecast1'),
@@ -704,6 +705,55 @@ class UIController {
         this.elements.hitCount.textContent = stats.hitCount;
         this.elements.critCount.textContent = stats.critCount;
         this.elements.currentDPS.textContent = Math.floor(currentDps);
+    }
+
+    updateAbilityBreakdown(usageMap, totalDamage) {
+        const container = this.elements.abilityBreakdownList;
+        if (!container) return;
+
+        container.innerHTML = '';
+        const entries = Array.from(usageMap.entries()).map(([name, data]) => ({
+            name,
+            count: data.count,
+            damage: data.damage,
+            percent: totalDamage > 0 ? (data.damage / totalDamage) * 100 : 0,
+        })).sort((a, b) => b.damage - a.damage);
+
+        if (entries.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'breakdown-empty';
+            empty.textContent = 'Use abilities to see their contribution breakdown here.';
+            container.appendChild(empty);
+            return;
+        }
+
+        entries.forEach((entry, index) => {
+            const row = document.createElement('div');
+            row.className = 'breakdown-row';
+            if (index === 0) {
+                row.classList.add('top');
+            }
+
+            const rank = document.createElement('span');
+            rank.className = 'breakdown-name';
+            rank.innerHTML = `<strong>${index + 1}.</strong> ${entry.name}`;
+
+            const uses = document.createElement('span');
+            uses.className = 'breakdown-count';
+            const label = entry.count === 1 ? 'use' : 'uses';
+            uses.textContent = `${entry.count} ${label}`;
+
+            const damage = document.createElement('span');
+            damage.className = 'breakdown-damage';
+            damage.textContent = `${Math.round(entry.damage).toLocaleString()} dmg`;
+
+            const percent = document.createElement('span');
+            percent.className = 'breakdown-percent';
+            percent.textContent = `${entry.percent.toFixed(1)}%`;
+
+            row.append(rank, uses, damage, percent);
+            container.appendChild(row);
+        });
     }
 
     updateForecast(values) {
@@ -1210,6 +1260,7 @@ class RogueSimulator {
         this.ui.updateBuffTimers([...this.state.buffs.values()], [...this.state.debuffs.values()]);
         this.ui.updateBuffLists([...this.state.buffs.values()], [...this.state.debuffs.values()]);
         this.ui.updateStats(this.state.stats, currentDps);
+        this.ui.updateAbilityBreakdown(this.state.stats.abilityUsage, this.state.stats.totalDamage);
         this.ui.updateForecast(this.getEnergyForecasts());
         this.ui.updateCombatTimer(this.state.stats.combatTime);
         this.ui.updateSessionComparison(this.previousSession, this.currentSession);
