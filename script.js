@@ -1137,6 +1137,7 @@ class RogueSimulator {
     startCombat() {
         if (this.state.inCombat) return;
         this.state.inCombat = true;
+        this.state.cooldowns.clear();
         this.state.stats.combatTime = 0;
         this.state.stats.totalDamage = 0;
         this.state.stats.hitCount = 0;
