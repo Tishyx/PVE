@@ -1004,6 +1004,76 @@ class RogueSimulator {
         }));
 
         abilityList.push(new Ability({
+            id: 'hemorrhage',
+            name: 'Hemorrhage',
+            icon: '🩸',
+            hotkey: '6',
+            energyCost: 35,
+            comboPoints: 1,
+            description: 'Deals extra weapon damage and applies a bleed weakness increasing damage taken.',
+            handler: (sim, ability) => {
+                const base = sim.rollWeaponDamage(1.1) + 55 + sim.getAttackPowerContribution(1.1);
+                const hit = sim.performYellowDamage({
+                    ability,
+                    baseDamage: base,
+                    comboPointsGenerated: 1,
+                });
+                if (!hit) {
+                    return;
+                }
+                sim.applyDebuff({
+                    id: 'hemorrhage',
+                    name: 'Hemorrhage',
+                    duration: 15,
+                    type: 'debuff',
+                    icon: '🩸',
+                    onApply: () => sim.addModifier('damage', 'hemorrhage', 0.04),
+                    onExpire: () => sim.removeModifier('damage', 'hemorrhage'),
+                });
+                sim.ui.addLogEntry('Hemorrhage weakens the target!', 'system');
+            },
+        }));
+
+        abilityList.push(new Ability({
+            id: 'envenom',
+            name: 'Envenom',
+            icon: '☠️',
+            hotkey: '7',
+            energyCost: 35,
+            comboPoints: 0,
+            description: 'Finishing move that consumes combo points to deal poison damage and sharpen critical strikes.',
+            handler: (sim, ability) => {
+                const combo = sim.state.comboPoints;
+                if (combo === 0) {
+                    sim.ui.addLogEntry('Envenom requires combo points.', 'system');
+                    return false;
+                }
+                const base = 90 + combo * 75 + sim.getAttackPowerContribution(0.3 * combo);
+                const hit = sim.performYellowDamage({
+                    ability,
+                    baseDamage: base,
+                    comboPointsSpent: combo,
+                });
+                if (!hit) {
+                    return false;
+                }
+                const critBonus = combo * 3;
+                const duration = 2 + combo * 2;
+                sim.applyBuff({
+                    id: 'envenom',
+                    name: 'Envenom',
+                    duration,
+                    type: 'buff',
+                    icon: '☠️',
+                    onApply: () => sim.addModifier('critChance', 'envenom', critBonus),
+                    onExpire: () => sim.removeModifier('critChance', 'envenom'),
+                });
+                sim.ui.addLogEntry(`Envenom grants +${critBonus}% crit chance for ${duration}s`, 'system');
+                return true;
+            },
+        }));
+
+        abilityList.push(new Ability({
             id: 'exposeArmor',
             name: 'Expose Armor',
             icon: '🛡️',
@@ -1076,6 +1146,36 @@ class RogueSimulator {
                     onTick: () => sim.refillEnergy(10),
                 });
                 sim.ui.addLogEntry('Shadow Focus channels energy regeneration.', 'system');
+            },
+        }));
+
+        abilityList.push(new Ability({
+            id: 'bladeFlurry',
+            name: 'Blade Flurry',
+            icon: '🌀',
+            hotkey: 't',
+            energyCost: 25,
+            comboPoints: 0,
+            cooldown: 120,
+            triggersGcd: false,
+            description: 'Unleash relentless strikes, increasing attack speed and damage for 12 seconds.',
+            handler: (sim) => {
+                sim.applyBuff({
+                    id: 'bladeFlurry',
+                    name: 'Blade Flurry',
+                    duration: 12,
+                    type: 'buff',
+                    icon: '🌀',
+                    onApply: () => {
+                        sim.addModifier('autoSpeed', 'bladeFlurry', 0.2);
+                        sim.addModifier('damage', 'bladeFlurry', 0.2);
+                    },
+                    onExpire: () => {
+                        sim.removeModifier('autoSpeed', 'bladeFlurry');
+                        sim.removeModifier('damage', 'bladeFlurry');
+                    },
+                });
+                sim.ui.addLogEntry('Blade Flurry activated!', 'system');
             },
         }));
 
@@ -1271,7 +1371,7 @@ class RogueSimulator {
     performYellowDamage({ ability, baseDamage, comboPointsGenerated = 0, comboPointsSpent = 0, critBonus = 0 }) {
         if (!this.rollHit()) {
             this.ui.addLogEntry(`${ability.name} missed!`, 'system');
-            return;
+            return false;
         }
         const critChance = this.config.stats.critChance + critBonus;
         const isCrit = this.rollCrit(critChance);
@@ -1283,6 +1383,7 @@ class RogueSimulator {
         if (comboPointsSpent) {
             this.consumeComboPoints(comboPointsSpent);
         }
+        return true;
     }
 
     applyDamage(amount, { ability, isCrit = false, isAuto = false, isDot = false } = {}) {
