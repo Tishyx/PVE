@@ -800,6 +800,20 @@ class UIController {
     attachHotkeyListeners() {
         document.addEventListener('keydown', (event) => {
             if (event.repeat) return;
+            const target = event.target;
+            if (target instanceof Element) {
+                if (target instanceof HTMLInputElement ||
+                    target instanceof HTMLTextAreaElement ||
+                    target instanceof HTMLSelectElement ||
+                    target.isContentEditable) {
+                    return;
+                }
+
+                const editableAncestor = target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])');
+                if (editableAncestor) {
+                    return;
+                }
+            }
             const abilityId = this.hotkeyMap?.get(event.key.toLowerCase());
             if (abilityId) {
                 event.preventDefault();
