@@ -96,6 +96,251 @@ class SoundPlayer {
     }
 }
 
+const PROC_DEFINITIONS = [
+    {
+        id: 'energySurge',
+        name: 'Energy Surge',
+        icon: '⚡',
+        description: 'Instantly restores energy on successful strikes.',
+        events: ['damage'],
+        defaultConfig: { enabled: true, chance: 20, energyGain: 25 },
+        fields: [
+            { key: 'chance', label: 'Proc Chance (%)', min: 0, max: 100, defaultValue: 20 },
+            { key: 'energyGain', label: 'Energy Gain', min: 0, defaultValue: 25 },
+        ],
+        condition: (context) => !context.isDot,
+        onTrigger: (sim, config) => {
+            const energy = Math.max(0, Number(config.energyGain) || 0);
+            let log = 'Energy Surge triggered!';
+            let floatingText = 'Energy Surge!';
+            let floatingType = 'proc';
+            if (energy > 0) {
+                sim.refillEnergy(energy);
+                log = `Energy Surge restores ${energy} energy!`;
+                floatingText = `+${energy} Energy`;
+                floatingType = 'energy';
+            } else {
+                log = 'Energy Surge triggered but no energy gain is configured.';
+            }
+            return {
+                log,
+                floatingText,
+                floatingTextType: floatingType,
+            };
+        },
+    },
+    {
+        id: 'flurryStrike',
+        name: 'Flurry Strike',
+        icon: '💨',
+        description: 'Critical hits grant temporary attack speed.',
+        events: ['damage'],
+        defaultConfig: { enabled: true, chance: 35, hastePercent: 25, duration: 6 },
+        fields: [
+            { key: 'chance', label: 'Proc Chance (%)', min: 0, max: 100, defaultValue: 35 },
+            { key: 'hastePercent', label: 'Haste Bonus (%)', min: 0, defaultValue: 25 },
+            { key: 'duration', label: 'Duration (s)', min: 0, step: 0.5, defaultValue: 6 },
+        ],
+        condition: (context) => context.isCrit && !context.isDot,
+        onTrigger: (sim, config) => {
+            const duration = Math.max(0, Number(config.duration) || 0);
+            const haste = (Number(config.hastePercent) || 0) / 100;
+            if (duration <= 0 || haste <= 0) {
+                return { log: 'Flurry Strike triggered but has no effect.' };
+            }
+            sim.applyBuff({
+                id: 'proc_flurryStrike',
+                name: 'Flurry Strike',
+                icon: '💨',
+                duration,
+                type: 'buff',
+                onApply: () => sim.addModifier('autoSpeed', 'proc_flurryStrike', haste),
+                onExpire: () => sim.removeModifier('autoSpeed', 'proc_flurryStrike'),
+            });
+            return {
+                log: `Flurry Strike increases attack speed by ${config.hastePercent}% for ${duration.toFixed(1)}s.`,
+                floatingText: 'Flurry Strike!',
+            };
+        },
+    },
+    {
+        id: 'overpoweringStrikes',
+        name: 'Overpowering Strikes',
+        icon: '🗡️',
+        description: 'Abilities have a chance to increase all damage done.',
+        events: ['damage'],
+        defaultConfig: { enabled: true, chance: 25, damagePercent: 15, duration: 8 },
+        fields: [
+            { key: 'chance', label: 'Proc Chance (%)', min: 0, max: 100, defaultValue: 25 },
+            { key: 'damagePercent', label: 'Damage Bonus (%)', min: 0, defaultValue: 15 },
+            { key: 'duration', label: 'Duration (s)', min: 0, step: 0.5, defaultValue: 8 },
+        ],
+        condition: (context) => !context.isAuto && !context.isDot,
+        onTrigger: (sim, config) => {
+            const duration = Math.max(0, Number(config.duration) || 0);
+            const bonus = (Number(config.damagePercent) || 0) / 100;
+            if (duration <= 0 || bonus <= 0) {
+                return { log: 'Overpowering Strikes triggered but has no effect.' };
+            }
+            sim.applyBuff({
+                id: 'proc_overpoweringStrikes',
+                name: 'Overpowering Strikes',
+                icon: '🗡️',
+                duration,
+                type: 'buff',
+                onApply: () => sim.addModifier('damage', 'proc_overpoweringStrikes', bonus),
+                onExpire: () => sim.removeModifier('damage', 'proc_overpoweringStrikes'),
+            });
+            return {
+                log: `Overpowering Strikes grants +${config.damagePercent}% damage for ${duration.toFixed(1)}s.`,
+                floatingText: 'Overpowering!',
+            };
+        },
+    },
+    {
+        id: 'criticalInsight',
+        name: 'Critical Insight',
+        icon: '🎯',
+        description: 'Landing a blow can increase your critical strike chance.',
+        events: ['damage'],
+        defaultConfig: { enabled: true, chance: 20, critPercent: 10, duration: 10 },
+        fields: [
+            { key: 'chance', label: 'Proc Chance (%)', min: 0, max: 100, defaultValue: 20 },
+            { key: 'critPercent', label: 'Crit Chance Bonus (%)', min: 0, defaultValue: 10 },
+            { key: 'duration', label: 'Duration (s)', min: 0, step: 0.5, defaultValue: 10 },
+        ],
+        condition: (context) => !context.isDot,
+        onTrigger: (sim, config) => {
+            const duration = Math.max(0, Number(config.duration) || 0);
+            const crit = Number(config.critPercent) || 0;
+            if (duration <= 0 || crit <= 0) {
+                return { log: 'Critical Insight triggered but has no effect.' };
+            }
+            sim.applyBuff({
+                id: 'proc_criticalInsight',
+                name: 'Critical Insight',
+                icon: '🎯',
+                duration,
+                type: 'buff',
+                onApply: () => sim.addModifier('critChance', 'proc_criticalInsight', crit),
+                onExpire: () => sim.removeModifier('critChance', 'proc_criticalInsight'),
+            });
+            return {
+                log: `Critical Insight grants +${crit}% crit chance for ${duration.toFixed(1)}s.`,
+                floatingText: 'Critical Insight!',
+            };
+        },
+    },
+    {
+        id: 'shadowRecovery',
+        name: 'Shadow Recovery',
+        icon: '🌑',
+        description: 'Recover energy and hasten cooldowns after successful abilities.',
+        events: ['damage'],
+        defaultConfig: { enabled: true, chance: 15, energyGain: 15, cooldownRatePercent: 30, duration: 6 },
+        fields: [
+            { key: 'chance', label: 'Proc Chance (%)', min: 0, max: 100, defaultValue: 15 },
+            { key: 'energyGain', label: 'Energy Gain', min: 0, defaultValue: 15 },
+            { key: 'cooldownRatePercent', label: 'CD Recovery (%)', min: 0, defaultValue: 30 },
+            { key: 'duration', label: 'Duration (s)', min: 0, step: 0.5, defaultValue: 6 },
+        ],
+        condition: (context) => !context.isAuto && !context.isDot,
+        onTrigger: (sim, config) => {
+            const energy = Math.max(0, Number(config.energyGain) || 0);
+            if (energy > 0) {
+                sim.refillEnergy(energy);
+            }
+            const duration = Math.max(0, Number(config.duration) || 0);
+            const rate = (Number(config.cooldownRatePercent) || 0) / 100;
+            let log = `Shadow Recovery restores ${energy} energy.`;
+            if (duration > 0 && rate > 0) {
+                sim.applyBuff({
+                    id: 'proc_shadowRecovery',
+                    name: 'Shadow Recovery',
+                    icon: '🌑',
+                    duration,
+                    type: 'buff',
+                    onApply: () => sim.addModifier('cooldownRate', 'proc_shadowRecovery', rate),
+                    onExpire: () => sim.removeModifier('cooldownRate', 'proc_shadowRecovery'),
+                });
+                log += ` Cooldowns recover ${config.cooldownRatePercent}% faster for ${duration.toFixed(1)}s.`;
+            }
+            if (duration <= 0 || rate <= 0) {
+                log += ' Cooldown acceleration unavailable with current settings.';
+            }
+            return {
+                log,
+                floatingText: 'Shadow Recovery!',
+                floatingTextType: 'energy',
+            };
+        },
+    },
+];
+
+class ProcSystem {
+    constructor(simulator) {
+        this.simulator = simulator;
+        this.definitions = PROC_DEFINITIONS;
+        this.config = this.getDefaultConfig();
+    }
+
+    getDefaultConfig() {
+        const config = {};
+        this.definitions.forEach(def => {
+            config[def.id] = { ...def.defaultConfig };
+        });
+        return config;
+    }
+
+    getConfig() {
+        return this.config;
+    }
+
+    updateConfig(newConfig = {}) {
+        const merged = {};
+        this.definitions.forEach(def => {
+            const config = { ...def.defaultConfig, ...(newConfig?.[def.id] || {}) };
+            config.enabled = Boolean(config.enabled);
+            def.fields.forEach(field => {
+                const value = config[field.key];
+                if (typeof value === 'number') {
+                    if (typeof field.min === 'number') {
+                        config[field.key] = Math.max(field.min, config[field.key]);
+                    }
+                    if (typeof field.max === 'number') {
+                        config[field.key] = Math.min(field.max, config[field.key]);
+                    }
+                }
+            });
+            merged[def.id] = config;
+        });
+        this.config = merged;
+        return this.config;
+    }
+
+    handleEvent(event, context) {
+        this.definitions.forEach(def => {
+            const config = this.config[def.id];
+            if (!config?.enabled) return;
+            if (!def.events.includes(event)) return;
+            if (def.condition && !def.condition(context, config, this.simulator)) return;
+            const chance = Number(config.chance ?? def.defaultConfig?.chance ?? 0);
+            if (chance <= 0) return;
+            if (Math.random() * 100 > chance) return;
+            const result = def.onTrigger(this.simulator, config, context) || {};
+            const logMessage = result.log ?? `${def.name} triggered!`;
+            const floatingText = result.floatingText ?? `${def.icon} ${def.name}!`;
+            const floatingType = result.floatingTextType ?? 'proc';
+            if (logMessage) {
+                this.simulator.ui.addLogEntry(logMessage, 'system');
+            }
+            if (floatingText) {
+                this.simulator.ui.showFloatingText(floatingText, floatingType);
+            }
+        });
+    }
+}
+
 class UIController {
     constructor() {
         this.elements = {
@@ -110,6 +355,7 @@ class UIController {
             debuffList: document.getElementById('debuffList'),
             combatLog: document.getElementById('combatLog'),
             actionBar: document.getElementById('actionBar'),
+            floatingTextContainer: document.getElementById('floatingTextContainer'),
             currentDPS: document.getElementById('currentDPS'),
             totalDamage: document.getElementById('totalDamage'),
             averageDPS: document.getElementById('averageDPS'),
@@ -137,8 +383,6 @@ class UIController {
             tickInterval: document.getElementById('tickInterval'),
             energyPerTick: document.getElementById('energyPerTick'),
             talentBonus: document.getElementById('talentBonus'),
-            procChance: document.getElementById('procChance'),
-            procEnergy: document.getElementById('procEnergy'),
             buildName: document.getElementById('buildName'),
             buildSelect: document.getElementById('buildSelect'),
         };
@@ -155,12 +399,15 @@ class UIController {
         /** @type {RogueSimulator | null} */
         this.simulator = null;
         this.soundPlayer = new SoundPlayer();
+        this.procInputs = new Map();
+        this.procConfigContainer = document.getElementById('procConfig');
     }
 
     bindSimulator(simulator) {
         this.simulator = simulator;
         const formInputs = Object.values(this.forms).filter(el => el instanceof HTMLInputElement || el instanceof HTMLSelectElement);
-        formInputs.forEach(input => {
+        const procInputs = this.getProcInputElements();
+        [...formInputs, ...procInputs].forEach(input => {
             input.addEventListener('change', () => {
                 simulator.updateConfig(this.getConfigFromInputs());
             });
@@ -185,6 +432,17 @@ class UIController {
 
     getConfigFromInputs() {
         const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
+        const procConfig = {};
+        this.procInputs.forEach((inputs, id) => {
+            const values = {};
+            inputs.fields.forEach((field, key) => {
+                values[key] = Number(field.value) || 0;
+            });
+            procConfig[id] = {
+                enabled: inputs.enabled.checked,
+                ...values,
+            };
+        });
         return {
             stats: {
                 attackPower: Math.max(0, Number(this.forms.attackPower.value) || 0),
@@ -197,17 +455,16 @@ class UIController {
                 tickInterval: Math.max(0.1, Number(this.forms.tickInterval.value) || 2000) / 1000,
                 energyPerTick: Math.max(0, Number(this.forms.energyPerTick.value) || 0),
                 talentBonus: Math.max(0, Number(this.forms.talentBonus.value) || 0) / 100,
-                procChance: clamp(Number(this.forms.procChance.value) || 0, 0, 100) / 100,
-                procEnergy: Math.max(0, Number(this.forms.procEnergy.value) || 0),
             },
             general: {
                 globalCooldown: 1.0,
             },
+            procs: procConfig,
         };
     }
 
     setConfigInputs(config) {
-        const { stats, regen } = config;
+        const { stats, regen, procs } = config;
         this.forms.attackPower.value = stats.attackPower;
         this.forms.weaponMin.value = stats.weaponMin;
         this.forms.weaponMax.value = stats.weaponMax;
@@ -216,8 +473,19 @@ class UIController {
         this.forms.tickInterval.value = Math.round(regen.tickInterval * 1000);
         this.forms.energyPerTick.value = regen.energyPerTick;
         this.forms.talentBonus.value = Math.round(regen.talentBonus * 100);
-        this.forms.procChance.value = Math.round(regen.procChance * 100);
-        this.forms.procEnergy.value = regen.procEnergy;
+        if (procs) {
+            Object.entries(procs).forEach(([id, values]) => {
+                const inputs = this.procInputs.get(id);
+                if (!inputs) return;
+                inputs.enabled.checked = Boolean(values.enabled);
+                inputs.fields.forEach((input, key) => {
+                    if (key in values) {
+                        input.value = values[key];
+                    }
+                });
+                inputs.updateDisabled?.();
+            });
+        }
     }
 
     populateBuildSelect(builds) {
@@ -273,6 +541,91 @@ class UIController {
         this.tooltip.hidden = true;
     }
 
+    renderProcControls(definitions, config) {
+        if (!this.procConfigContainer) return;
+        this.procConfigContainer.innerHTML = '';
+        this.procInputs.clear();
+        definitions.forEach(def => {
+            const procConfig = config?.[def.id] ?? def.defaultConfig;
+            const card = document.createElement('div');
+            card.className = 'proc-card';
+
+            const header = document.createElement('div');
+            header.className = 'proc-header';
+            const title = document.createElement('h3');
+            title.textContent = `${def.icon} ${def.name}`;
+            header.appendChild(title);
+
+            const toggleLabel = document.createElement('label');
+            toggleLabel.innerHTML = '<span>Enabled</span>';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = Boolean(procConfig?.enabled);
+            toggleLabel.prepend(checkbox);
+            header.appendChild(toggleLabel);
+            card.appendChild(header);
+
+            if (def.description) {
+                const desc = document.createElement('p');
+                desc.textContent = def.description;
+                desc.className = 'proc-description';
+                card.appendChild(desc);
+            }
+
+            const fieldsContainer = document.createElement('div');
+            fieldsContainer.className = 'proc-fields';
+            const fieldMap = new Map();
+
+            def.fields.forEach(field => {
+                const label = document.createElement('label');
+                label.innerHTML = `<span>${field.label}</span>`;
+                const input = document.createElement('input');
+                input.type = 'number';
+                if (typeof field.min === 'number') input.min = String(field.min);
+                if (typeof field.max === 'number') input.max = String(field.max);
+                if (typeof field.step === 'number') input.step = String(field.step);
+                input.value = procConfig?.[field.key] ?? field.defaultValue ?? 0;
+                label.appendChild(input);
+                fieldsContainer.appendChild(label);
+                fieldMap.set(field.key, input);
+            });
+
+            card.appendChild(fieldsContainer);
+            this.procConfigContainer.appendChild(card);
+            const updateDisabled = () => {
+                const disabled = !checkbox.checked;
+                fieldMap.forEach(input => {
+                    input.disabled = disabled;
+                });
+            };
+            checkbox.addEventListener('change', updateDisabled);
+            const record = { enabled: checkbox, fields: fieldMap, updateDisabled };
+            this.procInputs.set(def.id, record);
+            updateDisabled();
+        });
+    }
+
+    getProcInputElements() {
+        const elements = [];
+        this.procInputs.forEach(inputs => {
+            elements.push(inputs.enabled);
+            inputs.fields.forEach(field => elements.push(field));
+        });
+        return elements;
+    }
+
+    showFloatingText(message, type = 'proc') {
+        const container = this.elements.floatingTextContainer;
+        if (!container) return;
+        const node = document.createElement('div');
+        node.className = `floating-text ${type}`;
+        node.textContent = message;
+        const offset = (Math.random() * 20) - 10;
+        node.style.top = `${50 + offset}%`;
+        container.appendChild(node);
+        setTimeout(() => node.remove(), 1200);
+    }
+
     updateResources(state) {
         const energyPercent = (state.energy / state.maxEnergy) * 100;
         this.elements.energyBar.style.width = `${energyPercent}%`;
@@ -299,7 +652,8 @@ class UIController {
         [...buffValues, ...debuffValues].forEach(effect => {
             const pill = document.createElement('div');
             pill.className = `buff-pill ${effect.type === 'debuff' ? 'debuff' : ''}`;
-            pill.textContent = `${effect.name} - ${effect.remaining.toFixed(1)}s`;
+            const icon = effect.icon ? `${effect.icon} ` : '';
+            pill.textContent = `${icon}${effect.name} - ${effect.remaining.toFixed(1)}s`;
             this.elements.buffTimers.appendChild(pill);
         });
     }
@@ -309,7 +663,13 @@ class UIController {
         buffValues.forEach(effect => {
             const row = document.createElement('div');
             row.className = 'buff-row';
-            row.innerHTML = `<span>${effect.name}</span><span>${effect.remaining.toFixed(1)}s</span>`;
+            row.innerHTML = `
+                <span class="buff-name">
+                    ${effect.icon ? `<span class="buff-icon">${effect.icon}</span>` : ''}
+                    <span>${effect.name}</span>
+                </span>
+                <span>${effect.remaining.toFixed(1)}s</span>
+            `;
             this.elements.buffList.appendChild(row);
         });
 
@@ -317,7 +677,13 @@ class UIController {
         debuffValues.forEach(effect => {
             const row = document.createElement('div');
             row.className = 'buff-row debuff';
-            row.innerHTML = `<span>${effect.name}</span><span>${effect.remaining.toFixed(1)}s</span>`;
+            row.innerHTML = `
+                <span class="buff-name">
+                    ${effect.icon ? `<span class="buff-icon">${effect.icon}</span>` : ''}
+                    <span>${effect.name}</span>
+                </span>
+                <span>${effect.remaining.toFixed(1)}s</span>
+            `;
             this.elements.debuffList.appendChild(row);
         });
     }
@@ -457,9 +823,14 @@ class RogueSimulator {
             dummyHealth: 1000000,
             autoAttackTimer: 2,
             baseAutoSpeed: 2,
-            autoSpeedMultiplier: 1,
             energyTickProgress: 0,
-            energyRegenMultiplier: 1,
+            modifiers: {
+                autoSpeed: new Map(),
+                energyRegen: new Map(),
+                damage: new Map(),
+                critChance: new Map(),
+                cooldownRate: new Map(),
+            },
             buffs: new Map(),
             debuffs: new Map(),
             cooldowns: new Map(),
@@ -472,7 +843,10 @@ class RogueSimulator {
                 abilityUsage: new Map(),
             },
         };
+        this.procSystem = new ProcSystem(this);
+        this.ui.renderProcControls(this.procSystem.definitions, this.procSystem.getConfig());
         this.config = this.ui.getConfigFromInputs();
+        this.config.procs = this.procSystem.updateConfig(this.config.procs);
         this.abilities = this.initializeAbilities();
         this.hotkeyMap = new Map();
         this.ui.renderAbilities(this.abilities);
@@ -573,14 +947,9 @@ class RogueSimulator {
                     name: 'Slice and Dice',
                     duration,
                     type: 'buff',
-                    hasteBonus: 0.4,
                     icon: '⚔️',
-                    onApply: () => {
-                        sim.state.autoSpeedMultiplier = 1.4;
-                    },
-                    onExpire: () => {
-                        sim.state.autoSpeedMultiplier = 1.0;
-                    },
+                    onApply: () => sim.addModifier('autoSpeed', 'sliceAndDice', 0.4),
+                    onExpire: () => sim.removeModifier('autoSpeed', 'sliceAndDice'),
                 });
                 sim.consumeComboPoints(combo);
                 sim.ui.addLogEntry(`Slice and Dice refreshed for ${duration}s`, 'system');
@@ -666,12 +1035,8 @@ class RogueSimulator {
                     duration: 15,
                     type: 'buff',
                     icon: '🔥',
-                    onApply: () => {
-                        sim.state.energyRegenMultiplier = 2;
-                    },
-                    onExpire: () => {
-                        sim.state.energyRegenMultiplier = 1;
-                    },
+                    onApply: () => sim.addModifier('energyRegen', 'adrenalineRush', 1),
+                    onExpire: () => sim.removeModifier('energyRegen', 'adrenalineRush'),
                 });
                 sim.ui.addLogEntry('Adrenaline Rush activated!', 'system');
             },
@@ -739,8 +1104,10 @@ class RogueSimulator {
         this.updateRotationAdvice();
     }
 
-    updateConfig(newConfig) {
-        this.config = newConfig;
+    updateConfig(newConfig = {}) {
+        const merged = { ...newConfig };
+        merged.procs = this.procSystem.updateConfig(newConfig.procs);
+        this.config = merged;
     }
 
     castAbility(id) {
@@ -792,9 +1159,7 @@ class RogueSimulator {
         this.state.globalCooldown = 0;
         this.state.dummyHealth = this.state.dummyMaxHealth;
         this.state.autoAttackTimer = this.state.baseAutoSpeed;
-        this.state.autoSpeedMultiplier = 1;
         this.state.energyTickProgress = 0;
-        this.state.energyRegenMultiplier = 1;
         this.clearEffects();
         this.state.cooldowns.clear();
         this.state.stats = {
@@ -817,8 +1182,9 @@ class RogueSimulator {
     }
 
     updateCooldowns(delta) {
+        const rate = this.getCooldownRateMultiplier();
         for (const [id, remaining] of [...this.state.cooldowns.entries()]) {
-            const next = remaining - delta;
+            const next = remaining - delta * rate;
             if (next <= 0) {
                 this.state.cooldowns.delete(id);
             } else {
@@ -854,21 +1220,17 @@ class RogueSimulator {
     handleEnergy(delta) {
         const regenPerTick = this.config.regen.energyPerTick * (1 + this.config.regen.talentBonus);
         const tickInterval = this.config.regen.tickInterval;
-        const multiplier = this.state.energyRegenMultiplier || 1;
+        const multiplier = this.getEnergyRegenMultiplier();
         this.state.energyTickProgress += delta;
         while (this.state.energyTickProgress >= tickInterval) {
             this.state.energyTickProgress -= tickInterval;
             const baseGain = regenPerTick * multiplier;
             this.refillEnergy(baseGain);
-            if (Math.random() < this.config.regen.procChance) {
-                this.refillEnergy(this.config.regen.procEnergy);
-                this.ui.addLogEntry('Energy proc grants bonus energy!', 'system');
-            }
         }
     }
 
     handleAutoAttack(delta) {
-        const interval = this.state.baseAutoSpeed / this.state.autoSpeedMultiplier;
+        const interval = this.state.baseAutoSpeed / this.getAutoSpeedMultiplier();
         this.state.autoAttackTimer -= delta;
         if (this.state.autoAttackTimer <= 0) {
             this.performAutoAttack();
@@ -924,6 +1286,7 @@ class RogueSimulator {
         if (ability) {
             this.incrementAbilityUsage(ability, damage);
         }
+        this.procSystem.handleEvent('damage', { ability, isCrit, isAuto, isDot, damage });
         if (this.state.dummyHealth <= 0) {
             this.ui.addLogEntry('Dummy defeated!', 'system');
             this.stopCombat();
@@ -954,8 +1317,8 @@ class RogueSimulator {
     }
 
     rollCrit(chance) {
-        const critChance = Math.min(Math.max(chance, 0), 100) / 100;
-        return Math.random() <= critChance;
+        const totalChance = Math.min(Math.max(chance + this.getCritChanceBonus(), 0), 100) / 100;
+        return Math.random() <= totalChance;
     }
 
     applyDamageModifiers(baseDamage, isCrit) {
@@ -965,6 +1328,7 @@ class RogueSimulator {
             damage *= 1 + expose.armorReduction;
         }
         if (isCrit) damage *= 2;
+        damage *= this.getDamageMultiplier();
         return damage;
     }
 
@@ -992,6 +1356,47 @@ class RogueSimulator {
         this.state.comboPoints = Math.max(0, this.state.comboPoints - amount);
     }
 
+    addModifier(type, id, value) {
+        const bucket = this.state.modifiers[type];
+        if (!bucket) return;
+        bucket.set(id, value);
+    }
+
+    removeModifier(type, id) {
+        const bucket = this.state.modifiers[type];
+        bucket?.delete(id);
+    }
+
+    getModifierTotal(type) {
+        const bucket = this.state.modifiers[type];
+        if (!bucket) return 0;
+        let total = 0;
+        bucket.forEach(value => {
+            total += value;
+        });
+        return total;
+    }
+
+    getAutoSpeedMultiplier() {
+        return Math.max(0.1, 1 + this.getModifierTotal('autoSpeed'));
+    }
+
+    getEnergyRegenMultiplier() {
+        return Math.max(0, 1 + this.getModifierTotal('energyRegen'));
+    }
+
+    getDamageMultiplier() {
+        return Math.max(0, 1 + this.getModifierTotal('damage'));
+    }
+
+    getCritChanceBonus() {
+        return this.getModifierTotal('critChance');
+    }
+
+    getCooldownRateMultiplier() {
+        return Math.max(0, 1 + this.getModifierTotal('cooldownRate'));
+    }
+
     applyBuff(buff) {
         if (this.state.buffs.has(buff.id)) {
             this.state.buffs.get(buff.id).onExpire?.();
@@ -1015,8 +1420,7 @@ class RogueSimulator {
         this.state.debuffs.forEach(debuff => debuff.onExpire?.());
         this.state.buffs.clear();
         this.state.debuffs.clear();
-        this.state.autoSpeedMultiplier = 1;
-        this.state.energyRegenMultiplier = 1;
+        Object.values(this.state.modifiers).forEach(map => map.clear());
     }
 
     getCurrentDps() {
@@ -1046,9 +1450,7 @@ class RogueSimulator {
 
     getAverageEnergyPerSecond() {
         const base = (this.config.regen.energyPerTick * (1 + this.config.regen.talentBonus)) / this.config.regen.tickInterval;
-        const multiplier = this.state.energyRegenMultiplier || 1;
-        const proc = (this.config.regen.procChance * this.config.regen.procEnergy) / this.config.regen.tickInterval;
-        return (base * multiplier) + proc;
+        return base * this.getEnergyRegenMultiplier();
     }
 
     updateRotationAdvice() {
@@ -1105,6 +1507,7 @@ class RogueSimulator {
             return;
         }
         this.config = JSON.parse(JSON.stringify(build.config));
+        this.config.procs = this.procSystem.updateConfig(this.config.procs);
         this.ui.setConfigInputs(this.config);
         this.ui.addLogEntry(`Loaded build: ${build.name}`, 'system');
     }
