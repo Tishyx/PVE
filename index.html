@@ -66,6 +66,42 @@
                 </section>
 
                 <section class="panel-section">
+                    <h2>Talent Lab</h2>
+                    <div class="talent-grid">
+                        <label class="talent-option">
+                            <input type="checkbox" id="talentPrecision">
+                            <span>
+                                <strong>Precision Strikes</strong>
+                                <small>+3% hit chance. Finishers gain +5% crit chance and deal 8% more damage.</small>
+                            </span>
+                        </label>
+                        <label class="talent-option">
+                            <input type="checkbox" id="talentRelentless">
+                            <span>
+                                <strong>Relentless Strikes</strong>
+                                <small>Spending combo points refunds energy based on points consumed.</small>
+                            </span>
+                        </label>
+                        <label class="talent-option">
+                            <input type="checkbox" id="talentShadowTechniques">
+                            <span>
+                                <strong>Shadow Techniques</strong>
+                                <small>Auto attacks have a 30% chance to grant 1 combo point.</small>
+                            </span>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="panel-section">
+                    <h2>Rotation Sandbox</h2>
+                    <div class="rotation-config">
+                        <label for="rotationPriority" class="rotation-label">Priority List</label>
+                        <textarea id="rotationPriority" class="rotation-input" rows="4" placeholder="Example: sliceAndDice, rupture, envenom, backstab, sinisterStrike"></textarea>
+                        <p class="rotation-hint">Enter ability IDs or names separated by commas, arrows, or new lines to experiment with different priority systems.</p>
+                    </div>
+                </section>
+
+                <section class="panel-section">
                     <h2>Build Presets</h2>
                     <div class="build-controls">
                         <input type="text" id="buildName" placeholder="New build name">

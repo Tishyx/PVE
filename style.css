@@ -115,6 +115,80 @@ body {
     gap: 12px;
 }
 
+.talent-grid {
+    display: grid;
+    gap: 12px;
+}
+
+.talent-option {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(19, 28, 52, 0.68);
+    border: 1px solid rgba(255, 215, 0, 0.12);
+    font-size: 0.85rem;
+    color: #d5ddff;
+}
+
+.talent-option input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #ffda6a;
+    margin-top: 4px;
+}
+
+.talent-option strong {
+    display: block;
+    color: #ffe58d;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.talent-option small {
+    color: #a9b8ff;
+    font-size: 0.75rem;
+    line-height: 1.4;
+}
+
+.rotation-config {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.rotation-label {
+    font-size: 0.8rem;
+    color: #cdd5ff;
+    letter-spacing: 0.5px;
+}
+
+.rotation-input {
+    width: 100%;
+    min-height: 120px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(14, 20, 40, 0.85);
+    color: #f4f6fb;
+    resize: vertical;
+    font-size: 0.85rem;
+}
+
+.rotation-input:focus {
+    outline: none;
+    border-color: rgba(255, 215, 0, 0.6);
+    box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.12);
+}
+
+.rotation-hint {
+    font-size: 0.7rem;
+    color: #9fb3ff;
+    line-height: 1.4;
+}
+
 .proc-card {
     background: rgba(18, 26, 48, 0.78);
     border: 1px solid rgba(255, 215, 0, 0.12);
@@ -799,6 +873,10 @@ body {
 
 .floating-text.energy {
     color: #7cffb0;
+}
+
+.floating-text.combo {
+    color: #ff9dfc;
 }
 
 @keyframes floatUp {

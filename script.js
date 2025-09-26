@@ -384,6 +384,10 @@ class UIController {
             tickInterval: document.getElementById('tickInterval'),
             energyPerTick: document.getElementById('energyPerTick'),
             talentBonus: document.getElementById('talentBonus'),
+            talentPrecision: document.getElementById('talentPrecision'),
+            talentRelentless: document.getElementById('talentRelentless'),
+            talentShadowTechniques: document.getElementById('talentShadowTechniques'),
+            rotationPriority: document.getElementById('rotationPriority'),
             buildName: document.getElementById('buildName'),
             buildSelect: document.getElementById('buildSelect'),
         };
@@ -406,12 +410,16 @@ class UIController {
 
     bindSimulator(simulator) {
         this.simulator = simulator;
-        const formInputs = Object.values(this.forms).filter(el => el instanceof HTMLInputElement || el instanceof HTMLSelectElement);
+        const formInputs = Object.values(this.forms).filter(el => el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement);
         const procInputs = this.getProcInputElements();
         [...formInputs, ...procInputs].forEach(input => {
-            input.addEventListener('change', () => {
+            const handler = () => {
                 simulator.updateConfig(this.getConfigFromInputs());
-            });
+            };
+            input.addEventListener('change', handler);
+            if (input instanceof HTMLTextAreaElement) {
+                input.addEventListener('input', handler);
+            }
         });
 
         this.buttons.saveBuild.addEventListener('click', () => {
@@ -449,6 +457,7 @@ class UIController {
             ? rawTickInterval
             : 2000;
         const clampedTickIntervalMs = Math.max(100, tickIntervalMs);
+        const rotationPriority = this.parseRotationPriority(this.forms.rotationPriority?.value ?? '');
         return {
             stats: {
                 attackPower: Math.max(0, Number(this.forms.attackPower.value) || 0),
@@ -465,12 +474,20 @@ class UIController {
             general: {
                 globalCooldown: 1.0,
             },
+            talents: {
+                precisionStrikes: Boolean(this.forms.talentPrecision?.checked),
+                relentlessStrikes: Boolean(this.forms.talentRelentless?.checked),
+                shadowTechniques: Boolean(this.forms.talentShadowTechniques?.checked),
+            },
+            rotation: {
+                priority: rotationPriority,
+            },
             procs: procConfig,
         };
     }
 
     setConfigInputs(config) {
-        const { stats, regen, procs } = config;
+        const { stats, regen, procs, talents, rotation } = config;
         this.forms.attackPower.value = stats.attackPower;
         this.forms.weaponMin.value = stats.weaponMin;
         this.forms.weaponMax.value = stats.weaponMax;
@@ -479,6 +496,18 @@ class UIController {
         this.forms.tickInterval.value = Math.round(regen.tickInterval * 1000);
         this.forms.energyPerTick.value = regen.energyPerTick;
         this.forms.talentBonus.value = Math.round(regen.talentBonus * 100);
+        if (this.forms.talentPrecision) {
+            this.forms.talentPrecision.checked = Boolean(talents?.precisionStrikes);
+        }
+        if (this.forms.talentRelentless) {
+            this.forms.talentRelentless.checked = Boolean(talents?.relentlessStrikes);
+        }
+        if (this.forms.talentShadowTechniques) {
+            this.forms.talentShadowTechniques.checked = Boolean(talents?.shadowTechniques);
+        }
+        if (this.forms.rotationPriority) {
+            this.forms.rotationPriority.value = this.formatRotationPriority(rotation?.priority ?? []);
+        }
         if (procs) {
             Object.entries(procs).forEach(([id, values]) => {
                 const inputs = this.procInputs.get(id);
@@ -492,6 +521,19 @@ class UIController {
                 inputs.updateDisabled?.();
             });
         }
+    }
+
+    parseRotationPriority(value) {
+        if (!value) return [];
+        return value
+            .split(/[\n,>]+/)
+            .map(token => token.trim())
+            .filter(Boolean);
+    }
+
+    formatRotationPriority(priority) {
+        if (!Array.isArray(priority)) return '';
+        return priority.join(', ');
     }
 
     populateBuildSelect(builds) {
@@ -914,8 +956,10 @@ class RogueSimulator {
         };
         this.procSystem = new ProcSystem(this);
         this.ui.renderProcControls(this.procSystem.definitions, this.procSystem.getConfig());
-        this.config = this.ui.getConfigFromInputs();
-        this.config.procs = this.procSystem.updateConfig(this.config.procs);
+        const initialConfig = this.applyConfigDefaults(this.ui.getConfigFromInputs());
+        initialConfig.procs = this.procSystem.updateConfig(initialConfig.procs);
+        this.config = initialConfig;
+        this.ui.setConfigInputs(this.config);
         this.abilities = this.initializeAbilities();
         this.hotkeyMap = new Map();
         this.ui.renderAbilities(this.abilities);
@@ -929,6 +973,190 @@ class RogueSimulator {
         this.previousSession = null;
         this.loadBuilds();
         this.startLoop();
+    }
+
+    getBaseRotationPriority() {
+        return [
+            'sliceAndDice',
+            'rupture',
+            'exposeArmor',
+            'envenom',
+            'eviscerate',
+            'hemorrhage',
+            'backstab',
+            'sinisterStrike',
+            'adrenalineRush',
+            'shadowFocus',
+        ];
+    }
+
+    getDefaultConfig() {
+        return {
+            stats: {
+                attackPower: 1200,
+                weaponMin: 150,
+                weaponMax: 220,
+                critChance: 25,
+                hitChance: 95,
+            },
+            regen: {
+                tickInterval: 2,
+                energyPerTick: 20,
+                talentBonus: 0.3,
+            },
+            general: {
+                globalCooldown: 1.0,
+            },
+            talents: {
+                precisionStrikes: false,
+                relentlessStrikes: false,
+                shadowTechniques: false,
+            },
+            rotation: {
+                priority: this.getBaseRotationPriority(),
+            },
+            procs: this.procSystem.getDefaultConfig(),
+        };
+    }
+
+    applyConfigDefaults(config = {}) {
+        const defaults = this.getDefaultConfig();
+        return {
+            stats: { ...defaults.stats, ...(config.stats || {}) },
+            regen: { ...defaults.regen, ...(config.regen || {}) },
+            general: { ...defaults.general, ...(config.general || {}) },
+            talents: { ...defaults.talents, ...(config.talents || {}) },
+            rotation: {
+                priority: this.sanitizeRotationPriority(config.rotation?.priority ?? defaults.rotation.priority),
+            },
+            procs: config.procs || defaults.procs,
+        };
+    }
+
+    sanitizeRotationPriority(priority) {
+        if (Array.isArray(priority)) {
+            const cleaned = priority.map(token => String(token).trim()).filter(Boolean);
+            return cleaned.length > 0 ? cleaned : [...this.getBaseRotationPriority()];
+        }
+        if (typeof priority === 'string') {
+            const cleaned = priority
+                .split(/[\n,>]+/)
+                .map(token => token.trim())
+                .filter(Boolean);
+            return cleaned.length > 0 ? cleaned : [...this.getBaseRotationPriority()];
+        }
+        return [...this.getBaseRotationPriority()];
+    }
+
+    findAbilityByToken(token) {
+        if (!token) return null;
+        const normalized = token.trim().toLowerCase();
+        return this.abilities.find(ability =>
+            ability.id.toLowerCase() === normalized ||
+            ability.name.toLowerCase() === normalized ||
+            (ability.hotkey && ability.hotkey.toLowerCase() === normalized)
+        ) || null;
+    }
+
+    isAbilityReady(ability) {
+        if (!ability) return false;
+        if (this.state.energy < ability.energyCost) return false;
+        if (ability.triggersGcd && this.state.globalCooldown > 0) return false;
+        if (this.state.cooldowns.has(ability.id)) return false;
+        return true;
+    }
+
+    evaluateRotationAbility(ability) {
+        const notReady = { ready: false };
+        if (!this.isAbilityReady(ability)) {
+            return notReady;
+        }
+        switch (ability.id) {
+            case 'sliceAndDice': {
+                if (this.state.comboPoints === 0) return notReady;
+                const buff = this.state.buffs.get('sliceAndDice');
+                if (!buff || buff.remaining <= 3) {
+                    return { ready: true, reason: 'Keep Slice and Dice rolling' };
+                }
+                return notReady;
+            }
+            case 'exposeArmor': {
+                if (this.state.comboPoints === 0) return notReady;
+                const debuff = this.state.debuffs.get('exposeArmor');
+                if (!debuff || debuff.remaining <= 4) {
+                    return { ready: true, reason: 'Maintain armor reduction on the dummy' };
+                }
+                return notReady;
+            }
+            case 'rupture': {
+                if (this.state.comboPoints === 0) return notReady;
+                const bleed = this.state.debuffs.get('rupture');
+                if (!bleed || bleed.remaining <= 4) {
+                    return { ready: true, reason: 'Refresh Rupture bleed uptime' };
+                }
+                return notReady;
+            }
+            case 'envenom': {
+                if (this.state.comboPoints === 0) return notReady;
+                const buff = this.state.buffs.get('envenom');
+                if (this.state.comboPoints >= 5 || !buff) {
+                    return { ready: true, reason: 'Spend combo points for poison burst' };
+                }
+                return notReady;
+            }
+            case 'eviscerate': {
+                if (this.state.comboPoints >= 5) {
+                    return { ready: true, reason: 'Dump 5 combo points for heavy damage' };
+                }
+                return notReady;
+            }
+            case 'hemorrhage': {
+                const debuff = this.state.debuffs.get('hemorrhage');
+                if (!debuff || debuff.remaining <= 4) {
+                    return { ready: true, reason: 'Keep Hemorrhage weakness active' };
+                }
+                return notReady;
+            }
+            case 'backstab': {
+                if (this.state.comboPoints < this.state.maxComboPoints) {
+                    return { ready: true, reason: 'Generate combo points quickly' };
+                }
+                return notReady;
+            }
+            case 'sinisterStrike': {
+                if (this.state.comboPoints < this.state.maxComboPoints) {
+                    return { ready: true, reason: 'Build combo points' };
+                }
+                return notReady;
+            }
+            case 'adrenalineRush': {
+                if (!this.state.buffs.has('adrenalineRush') && this.state.energy <= 50) {
+                    return { ready: true, reason: 'Boost regeneration with Adrenaline Rush' };
+                }
+                return notReady;
+            }
+            case 'shadowFocus': {
+                if (!this.state.buffs.has('shadowFocus') && this.state.energy <= 60) {
+                    return { ready: true, reason: 'Recover energy via Shadow Focus' };
+                }
+                return notReady;
+            }
+            default:
+                return { ready: true, reason: `Use ${ability.name}` };
+        }
+    }
+
+    getRotationAdviceFromPriority() {
+        const priority = this.config.rotation?.priority ?? [];
+        for (const token of priority) {
+            const ability = this.findAbilityByToken(token);
+            if (!ability) continue;
+            const evaluation = this.evaluateRotationAbility(ability);
+            if (evaluation.ready) {
+                return { ability: ability.name, reason: evaluation.reason };
+            }
+        }
+        return { ability: 'Wait', reason: 'Pooling energy for the next big move' };
     }
 
     initializeAbilities() {
@@ -1021,6 +1249,7 @@ class RogueSimulator {
                     onExpire: () => sim.removeModifier('autoSpeed', 'sliceAndDice'),
                 });
                 sim.consumeComboPoints(combo);
+                sim.onComboPointsSpent(ability, combo);
                 sim.ui.addLogEntry(`Slice and Dice refreshed for ${duration}s`, 'system');
                 return true;
             },
@@ -1054,6 +1283,7 @@ class RogueSimulator {
                     },
                 });
                 sim.consumeComboPoints(combo);
+                sim.onComboPointsSpent(ability, combo);
                 return true;
             },
         }));
@@ -1152,6 +1382,7 @@ class RogueSimulator {
                     icon: '🛡️',
                 });
                 sim.consumeComboPoints(combo);
+                sim.onComboPointsSpent(ability, combo);
                 sim.ui.addLogEntry(`Expose Armor applied for ${duration}s`, 'system');
                 return true;
             },
@@ -1283,8 +1514,8 @@ class RogueSimulator {
     }
 
     updateConfig(newConfig = {}) {
-        const merged = { ...newConfig };
-        merged.procs = this.procSystem.updateConfig(newConfig.procs);
+        const merged = this.applyConfigDefaults(newConfig);
+        merged.procs = this.procSystem.updateConfig(merged.procs);
         this.config = merged;
     }
 
@@ -1431,6 +1662,13 @@ class RogueSimulator {
         const isCrit = this.rollCrit(this.config.stats.critChance);
         const damage = this.applyDamageModifiers(baseDamage, isCrit);
         this.applyDamage(damage, { ability: { name: 'Auto Attack', id: 'auto' }, isCrit, isAuto: true });
+        if (this.config.talents?.shadowTechniques) {
+            if (Math.random() <= 0.3) {
+                this.addComboPoints(1);
+                this.ui.addLogEntry('Shadow Techniques grants an extra combo point!', 'system');
+                this.ui.showFloatingText('+1 Combo', 'combo');
+            }
+        }
     }
 
     performYellowDamage({ ability, baseDamage, comboPointsGenerated = 0, comboPointsSpent = 0, critBonus = 0 }) {
@@ -1438,17 +1676,37 @@ class RogueSimulator {
             this.ui.addLogEntry(`${ability.name} missed!`, 'system');
             return false;
         }
-        const critChance = this.config.stats.critChance + critBonus;
+        let critChance = this.config.stats.critChance + critBonus;
+        const isFinisher = comboPointsSpent > 0;
+        if (isFinisher && this.config.talents?.precisionStrikes) {
+            critChance += 5;
+        }
         const isCrit = this.rollCrit(critChance);
-        const damage = this.applyDamageModifiers(baseDamage, isCrit);
+        let damage = this.applyDamageModifiers(baseDamage, isCrit);
+        if (isFinisher && this.config.talents?.precisionStrikes) {
+            damage *= 1.08;
+        }
         this.applyDamage(damage, { ability, isCrit });
         if (comboPointsGenerated) {
             this.addComboPoints(comboPointsGenerated);
         }
         if (comboPointsSpent) {
             this.consumeComboPoints(comboPointsSpent);
+            this.onComboPointsSpent(ability, comboPointsSpent);
         }
         return true;
+    }
+
+    onComboPointsSpent(ability, amount) {
+        if (!amount) return;
+        if (this.config.talents?.relentlessStrikes) {
+            const refund = Math.round(8 + amount * 3);
+            if (refund > 0) {
+                this.refillEnergy(refund);
+                this.ui.addLogEntry(`Relentless Strikes refunds ${refund} energy after using ${ability.name}.`, 'system');
+                this.ui.showFloatingText(`+${refund} Energy`, 'energy');
+            }
+        }
     }
 
     applyDamage(amount, { ability, isCrit = false, isAuto = false, isDot = false } = {}) {
@@ -1498,13 +1756,22 @@ class RogueSimulator {
     }
 
     rollHit() {
-        const hitChance = this.config.stats.hitChance / 100;
+        const bonus = this.getTalentHitBonus();
+        const hitChance = Math.min(Math.max(this.config.stats.hitChance + bonus, 0), 100) / 100;
         return Math.random() <= hitChance;
     }
 
     rollCrit(chance) {
         const totalChance = Math.min(Math.max(chance + this.getCritChanceBonus(), 0), 100) / 100;
         return Math.random() <= totalChance;
+    }
+
+    getTalentHitBonus() {
+        let bonus = 0;
+        if (this.config.talents?.precisionStrikes) {
+            bonus += 3;
+        }
+        return bonus;
     }
 
     applyDamageModifiers(baseDamage, isCrit) {
@@ -1644,25 +1911,8 @@ class RogueSimulator {
             this.ui.updateRotationCoach({ ability: 'Start combat', reason: 'Press Start Combat to begin the simulation.' });
             return;
         }
-        let ability = 'Wait';
-        let reason = 'Pooling energy';
-        if (!this.state.buffs.has('sliceAndDice') && this.state.comboPoints >= 1) {
-            ability = 'Slice and Dice';
-            reason = 'Maintain attack speed buff';
-        } else if (this.state.comboPoints >= 5) {
-            ability = this.state.debuffs.has('exposeArmor') ? 'Eviscerate' : 'Expose Armor';
-            reason = this.state.debuffs.has('exposeArmor') ? 'Spend max combo points for damage' : 'Apply armor shred';
-        } else if (this.state.energy >= 60) {
-            ability = 'Backstab';
-            reason = 'High energy - generate combo points fast';
-        } else if (this.state.energy >= 40) {
-            ability = 'Sinister Strike';
-            reason = 'Low combo points - builder';
-        } else if (!this.state.cooldowns.has('adrenalineRush')) {
-            ability = 'Adrenaline Rush';
-            reason = 'Low energy - boost regeneration';
-        }
-        this.ui.updateRotationCoach({ ability, reason });
+        const advice = this.getRotationAdviceFromPriority();
+        this.ui.updateRotationCoach(advice);
     }
 
     getBuildStorage() {
@@ -1692,8 +1942,9 @@ class RogueSimulator {
             this.ui.addLogEntry('No build selected.', 'system');
             return;
         }
-        this.config = JSON.parse(JSON.stringify(build.config));
-        this.config.procs = this.procSystem.updateConfig(this.config.procs);
+        const restored = this.applyConfigDefaults(JSON.parse(JSON.stringify(build.config)));
+        restored.procs = this.procSystem.updateConfig(restored.procs);
+        this.config = restored;
         this.ui.setConfigInputs(this.config);
         this.ui.addLogEntry(`Loaded build: ${build.name}`, 'system');
     }
