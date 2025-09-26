@@ -532,18 +532,18 @@ body {
 }
 
 .toolbar {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 12px;
     padding: 14px;
     border-radius: 12px;
     background: rgba(12, 18, 32, 0.82);
     border: 1px solid rgba(255, 215, 0, 0.12);
+    justify-content: center;
 }
 
 .ability-button {
     position: relative;
-    height: 64px;
     border-radius: 12px;
     background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.25), rgba(0, 0, 0, 0.85));
     border: 2px solid rgba(255, 215, 0, 0.32);
@@ -554,6 +554,8 @@ body {
     color: #ffeab3;
     font-size: 1.6rem;
     transition: transform 0.12s ease, box-shadow 0.12s ease;
+    flex: 0 0 72px;
+    height: 72px;
 }
 
 .ability-button:active {
