@@ -426,9 +426,9 @@ class UIController {
             const id = this.forms.buildSelect.value;
             simulator.deleteBuild(id);
         });
-        this.buttons.startCombat.addEventListener('click', () => simulator.startCombat());
-        this.buttons.stopCombat.addEventListener('click', () => simulator.stopCombat());
-        this.buttons.resetCombat.addEventListener('click', () => simulator.reset());
+        this.buttons.startCombat.addEventListener('click', () => this.simulator?.startCombat());
+        this.buttons.stopCombat.addEventListener('click', () => this.simulator?.stopCombat());
+        this.buttons.resetCombat.addEventListener('click', () => this.simulator?.reset());
     }
 
     getConfigFromInputs() {
