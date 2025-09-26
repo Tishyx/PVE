@@ -1248,15 +1248,23 @@ class RogueSimulator {
     }
 
     update(delta) {
-        if (delta > 0.5) return; // prevent huge jumps on tab switch
-        this.state.globalCooldown = Math.max(0, this.state.globalCooldown - delta);
-        this.updateCooldowns(delta);
-        if (this.state.inCombat) {
-            this.state.stats.combatTime += delta;
-            this.updateBuffs(delta);
-            this.handleEnergy(delta);
-            this.handleAutoAttack(delta);
-            this.updateDpsHistory();
+        let remaining = Math.max(delta, 0);
+        const maxStep = 0.5;
+
+        while (remaining > 0) {
+            const step = Math.min(remaining, maxStep);
+            // Process long frames in capped chunks so that timers advance accurately
+            // even after tab switches, without allowing extremely large simulation jumps.
+            this.state.globalCooldown = Math.max(0, this.state.globalCooldown - step);
+            this.updateCooldowns(step);
+            if (this.state.inCombat) {
+                this.state.stats.combatTime += step;
+                this.updateBuffs(step);
+                this.handleEnergy(step);
+                this.handleAutoAttack(step);
+                this.updateDpsHistory();
+            }
+            remaining -= step;
         }
 
         const currentDps = this.getCurrentDps();
@@ -1455,7 +1463,9 @@ class RogueSimulator {
         const critLabel = isCrit ? ' (CRIT!)' : '';
         const dotLabel = isDot ? ' (DoT)' : '';
         this.ui.addLogEntry(`${label}${dotLabel}: ${damage}${critLabel}`, entryType);
-        this.ui.flashDummy();
+        if (!isDot) {
+            this.ui.flashDummy();
+        }
         if (ability) {
             this.incrementAbilityUsage(ability, damage);
         }
@@ -1476,7 +1486,10 @@ class RogueSimulator {
 
     rollWeaponDamage(multiplier = 1) {
         const { weaponMin, weaponMax } = this.config.stats;
-        const roll = weaponMin + Math.random() * Math.max(weaponMax - weaponMin, 1);
+        const lower = Math.min(weaponMin, weaponMax);
+        const upper = Math.max(weaponMin, weaponMax);
+        const span = upper - lower;
+        const roll = span <= 0 ? lower : lower + Math.random() * span;
         return roll * multiplier;
     }
 
