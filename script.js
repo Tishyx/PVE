@@ -444,6 +444,11 @@ class UIController {
                 ...values,
             };
         });
+        const rawTickInterval = Number(this.forms.tickInterval.value);
+        const tickIntervalMs = Number.isFinite(rawTickInterval) && rawTickInterval > 0
+            ? rawTickInterval
+            : 2000;
+        const clampedTickIntervalMs = Math.max(100, tickIntervalMs);
         return {
             stats: {
                 attackPower: Math.max(0, Number(this.forms.attackPower.value) || 0),
@@ -453,7 +458,7 @@ class UIController {
                 hitChance: clamp(Number(this.forms.hitChance.value) || 0, 0, 100),
             },
             regen: {
-                tickInterval: Math.max(0.1, Number(this.forms.tickInterval.value) || 2000) / 1000,
+                tickInterval: clampedTickIntervalMs / 1000,
                 energyPerTick: Math.max(0, Number(this.forms.energyPerTick.value) || 0),
                 talentBonus: Math.max(0, Number(this.forms.talentBonus.value) || 0) / 100,
             },
@@ -1298,6 +1303,7 @@ class RogueSimulator {
         this.state.comboPoints = 0;
         this.state.energy = this.state.maxEnergy;
         this.state.dummyHealth = this.state.dummyMaxHealth;
+        this.state.autoAttackTimer = this.state.baseAutoSpeed;
         this.state.energyTickProgress = 0;
         this.ui.addLogEntry('Combat started!', 'system');
     }
