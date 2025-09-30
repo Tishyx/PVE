@@ -4,7 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rogue PvE Damage Dummy Simulator</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="index.css">
+<script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.21.0"
+  }
+}
+</script>
 </head>
 <body>
     <div class="main-container">
@@ -45,6 +52,10 @@
                 <section class="panel-section">
                     <h2>Energy Regeneration</h2>
                     <div class="form-grid">
+                        <label>
+                            <span>Max Energy</span>
+                            <input type="number" id="maxEnergy" min="100" max="250" value="100">
+                        </label>
                         <label>
                             <span>Tick Interval (ms)</span>
                             <input type="number" id="tickInterval" min="100" value="2000">
@@ -89,28 +100,6 @@
                                 <small>Auto attacks have a 30% chance to grant 1 combo point.</small>
                             </span>
                         </label>
-                    </div>
-                </section>
-
-                <section class="panel-section">
-                    <h2>Rotation Sandbox</h2>
-                    <div class="rotation-config">
-                        <label for="rotationPriority" class="rotation-label">Priority List</label>
-                        <textarea id="rotationPriority" class="rotation-input" rows="4" placeholder="Example: sliceAndDice, rupture, envenom, backstab, sinisterStrike"></textarea>
-                        <p class="rotation-hint">Enter ability IDs or names separated by commas, arrows, or new lines to experiment with different priority systems.</p>
-                    </div>
-                </section>
-
-                <section class="panel-section">
-                    <h2>Build Presets</h2>
-                    <div class="build-controls">
-                        <input type="text" id="buildName" placeholder="New build name">
-                        <button type="button" id="saveBuild">Save Build</button>
-                        <select id="buildSelect"></select>
-                        <div class="build-actions">
-                            <button type="button" id="loadBuild">Load</button>
-                            <button type="button" id="deleteBuild">Delete</button>
-                        </div>
                     </div>
                 </section>
 
@@ -253,14 +242,6 @@
                     <div class="buff-list" id="buffList"></div>
                     <div class="debuff-list" id="debuffList"></div>
                 </section>
-
-                <section class="panel-section">
-                    <h2>Rotation Coach</h2>
-                    <div class="rotation-coach">
-                        <strong id="nextAbility">Start combat</strong>
-                        <p id="nextAbilityReason">Rotation advice will appear here once the simulator is running.</p>
-                    </div>
-                </section>
             </aside>
         </div>
     </div>
@@ -271,6 +252,6 @@
         <span class="tooltip-hotkey"></span>
     </div>
 
-    <script src="script.js" type="module"></script>
+    <script src="index.tsx" type="module"></script>
 </body>
 </html>
