@@ -13,6 +13,45 @@ body {
     min-height: 100vh;
 }
 
+.mode-switcher {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.mode-button {
+    padding: 10px 22px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 215, 0, 0.35);
+    background: rgba(16, 24, 44, 0.8);
+    color: #f4f6fb;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.mode-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+}
+
+.mode-button.active {
+    background: linear-gradient(120deg, rgba(255, 215, 0, 0.38), rgba(255, 191, 0, 0.2));
+    color: #080d1f;
+    box-shadow: 0 10px 22px rgba(255, 215, 0, 0.25);
+}
+
+.mode-view {
+    display: none;
+}
+
+.mode-view.active {
+    display: block;
+}
+
 .main-container {
     max-width: 1620px;
     margin: 0 auto;
@@ -807,6 +846,11 @@ body {
     color: #ff9dfc;
 }
 
+.floating-text.anchored {
+    left: auto;
+    transform: translate(-50%, -32px);
+}
+
 @keyframes floatUp {
     0% {
         opacity: 0;
@@ -838,6 +882,11 @@ body {
 
 .damage-number.auto {
     color: #f0f0f0; /* Auto-attack white */
+}
+
+.damage-number.anchored {
+    left: auto;
+    top: auto;
 }
 
 .damage-number.crit {
@@ -903,6 +952,199 @@ body {
     margin-top: 6px;
     font-size: 0.75rem;
     color: #ffd460;
+}
+
+.arpg-container {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    position: relative;
+}
+
+.arpg-main {
+    display: grid;
+    grid-template-columns: minmax(640px, 1fr) 320px;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+.arpg-world {
+    position: relative;
+}
+
+.arpg-canvas-wrapper {
+    position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 215, 0, 0.16);
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
+    background: rgba(8, 12, 24, 0.82);
+}
+
+#arpg-canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+}
+
+.arpg-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.arpg-player-hud {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.arpg-player-hud .energy-bar-container {
+    width: 260px;
+    background: rgba(4, 9, 18, 0.8);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    overflow: hidden;
+}
+
+.player-buff-icons {
+    display: flex;
+    gap: 8px;
+}
+
+.player-buff {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: rgba(255, 215, 0, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.player-buff.debuff {
+    background: rgba(255, 95, 95, 0.22);
+}
+
+.arpg-target-frame {
+    position: absolute;
+    top: 18px;
+    left: 24px;
+    min-width: 220px;
+    background: rgba(9, 13, 25, 0.78);
+    border-radius: 14px;
+    padding: 14px;
+    border: 1px solid rgba(255, 215, 0, 0.18);
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+}
+
+.arpg-target-frame.hidden {
+    opacity: 0.4;
+}
+
+.arpg-target-frame h3 {
+    font-size: 1rem;
+    color: #ffe17a;
+    margin-bottom: 10px;
+}
+
+.arpg-range-warning {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 87, 87, 0.85);
+    color: #fff5f5;
+    padding: 6px 18px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    letter-spacing: 1px;
+    box-shadow: 0 12px 24px rgba(255, 87, 87, 0.2);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.arpg-range-warning.visible {
+    opacity: 1;
+}
+
+#arpg-minimap {
+    position: absolute;
+    top: 22px;
+    right: 24px;
+    width: 180px;
+    height: 180px;
+    background: rgba(7, 11, 23, 0.88);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    border-radius: 12px;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4);
+}
+
+#arpg-actionBar {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    pointer-events: auto;
+    background: rgba(10, 15, 30, 0.82);
+    padding: 10px 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 215, 0, 0.18);
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.4);
+}
+
+.arpg-info-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.arpg-config-panel .panel-section + .panel-section {
+    margin-top: 20px;
+}
+
+.arpg-combat-log-window {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    width: 320px;
+    max-height: 260px;
+    pointer-events: auto;
+    z-index: 90;
+}
+
+.arpg-combat-log-window .combat-log {
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.arpg-combat-log-window .drag-handle {
+    cursor: grab;
+    padding: 8px 12px;
+    background: rgba(255, 215, 0, 0.16);
+    border-radius: 10px 10px 0 0;
+    text-align: center;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin: -20px -20px 12px;
+}
+
+.arpg-combat-log-window .drag-handle:active {
+    cursor: grabbing;
 }
 
 @media (max-width: 1280px) {
